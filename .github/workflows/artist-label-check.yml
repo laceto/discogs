@@ -1,0 +1,36 @@
+name: Discogs artist label check
+
+on:
+  push:
+    paths:
+      - ".github/workflows/artist-label-check.yml"
+      - "scripts/artist_label_check.py"
+  workflow_dispatch:
+    inputs:
+      artist:
+        description: Artist name
+        default: Gabriel Ananda
+      label_pattern:
+        description: Case-insensitive regex for label names
+        default: "kompakt|speicher|^k2$"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Query Discogs
+        env:
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          ARTIST: ${{ inputs.artist || 'Gabriel Ananda' }}
+          LABEL_PATTERN: ${{ inputs.label_pattern || 'kompakt|speicher|^k2$' }}
+        run: python scripts/artist_label_check.py --artist "$ARTIST" --label-pattern "$LABEL_PATTERN" --out matches.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: discogs-matches
+          path: matches.json
