@@ -27,8 +27,8 @@ def discogs_get(path, **params):
     headers = {"Authorization": f"Discogs token={TOKEN}"} if TOKEN else {}
     for attempt in range(6):
         r = session.get(f"{DISCOGS}{path}", params=params, headers=headers, timeout=30)
-        if r.status_code == 429:
-            time.sleep(15 * (attempt + 1))
+        if r.status_code == 429 or r.status_code >= 500:
+            time.sleep(10 * (attempt + 1))
             continue
         r.raise_for_status()
         time.sleep(DELAY)
@@ -90,18 +90,27 @@ def main():
     entries = list(paginate(f"/artists/{artist_id}/releases", "releases"))
     print(f"Discography entries: {len(entries)}")
 
-    matches, labels_seen = [], set()
+    matches, labels_seen, errors = [], set(), []
+    seen_keys = set()
     for e in entries:
         rows = []
         if e["type"] == "master":
-            for v in paginate(f"/masters/{e['id']}/versions", "versions"):
-                rows.append((v.get("label", ""), v.get("catno", ""), v.get("id"), v.get("released", "")))
+            # Fall back to the main release's label if versions can't be fetched.
+            rows.append((e.get("label", ""), "", e.get("main_release"), e.get("year", "")))
+            try:
+                for v in paginate(f"/masters/{e['id']}/versions", "versions"):
+                    rows.append((v.get("label", ""), v.get("catno", ""), v.get("id"), v.get("released", "")))
+            except Exception as exc:  # keep going; report at the end
+                errors.append(f"master {e['id']} ({e['title']}): {exc}")
+                print(f"WARN: {errors[-1]}")
         else:
             rows.append((e.get("label", ""), e.get("catno", ""), e["id"], e.get("year", "")))
         for label, catno, rid, year in rows:
             for lab in re.split(r",\s*", label or ""):
                 labels_seen.add(lab)
-                if lab and pat.search(lab):
+                key = (rid, lab)
+                if lab and pat.search(lab) and key not in seen_keys:
+                    seen_keys.add(key)
                     matches.append({
                         "title": e["title"], "artist": e.get("artist"), "role": e.get("role"),
                         "label": lab, "catno": catno, "year": year,
@@ -110,7 +119,7 @@ def main():
 
     with open(args.out, "w") as f:
         json.dump({"artist": artist["name"], "artist_id": artist_id,
-                   "labels_seen": sorted(labels_seen), "matches": matches}, f, indent=2)
+                   "labels_seen": sorted(labels_seen), "matches": matches, "errors": errors}, f, indent=2)
 
     lines = [f"## {artist['name']} on labels matching `{args.label_pattern}`", ""]
     if matches:
@@ -119,6 +128,8 @@ def main():
             lines.append(f"| {m['title']} | {m['artist']} | {m['role']} | {m['label']} | {m['catno']} | {m['year']} | {m['url']} |")
     else:
         lines.append("**No matching releases found.**")
+    if errors:
+        lines += ["", f"**{len(errors)} master(s) could not be expanded:**"] + [f"- {x}" for x in errors]
     lines += ["", f"All labels seen ({len(labels_seen)}): " + "; ".join(sorted(l for l in labels_seen if l))]
     text = "\n".join(lines)
     print(text)
