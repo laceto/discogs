@@ -8,8 +8,15 @@ information (title, artists, label, year, genres/styles, tracklist) as JSON.
 
 Usage:
     python discogs_release_reader.py [URL]
+    python discogs_release_reader.py [URL] --full
 
-If no URL is given, defaults to the MyMy & Emika "Price Tag EP" release.
+If no URL is given, defaults to the MyMy & Emika "Price Tag EP" release. The
+default behavior (no flag) is unauthenticated and unchanged: it fetches the
+public REST API directly and prints a summary. Passing --full additionally
+builds an authenticated client (discogs.client.get_client, requires
+DISCOGS_USER_TOKEN), collects full release detail plus marketplace stats and
+price suggestions (discogs.collectors.release), and persists the result to
+data/release/<id>.json (discogs.storage.save_json).
 """
 
 import argparse
@@ -17,6 +24,14 @@ import re
 import sys
 
 import requests
+
+from discogs.client import get_client
+from discogs.collectors.release import (
+    collect_marketplace_stats,
+    collect_price_suggestions,
+    collect_release,
+)
+from discogs.storage import save_json
 
 DEFAULT_URL = "https://www.discogs.com/it/release/2051210-MyMy-Emika-Price-Tag-EP"
 API_BASE = "https://api.discogs.com/releases"
@@ -67,9 +82,28 @@ def format_release(data: dict) -> str:
     return "\n".join(lines)
 
 
+def collect_full_release(release_id: str):
+    """Build an authenticated client, collect full release detail + marketplace/
+    price data, and persist it to data/release/<id>.json. Returns the path written to.
+    """
+    client = get_client()
+    record = collect_release(client, release_id)
+    record["marketplace_stats"] = collect_marketplace_stats(client, release_id)
+    record["price_suggestions"] = collect_price_suggestions(client, release_id)
+    return save_json("release", release_id, record)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("url", nargs="?", default=DEFAULT_URL, help="Discogs release URL")
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help=(
+            "also collect full detail via an authenticated client and persist it to "
+            "data/release/<id>.json"
+        ),
+    )
     args = parser.parse_args()
 
     try:
@@ -80,6 +114,14 @@ def main() -> None:
         sys.exit(1)
 
     print(format_release(data))
+
+    if args.full:
+        try:
+            path = collect_full_release(release_id)
+        except Exception as exc:  # noqa: BLE001 - surface any collector/auth failure clearly
+            print(f"error collecting full detail: {exc}", file=sys.stderr)
+            sys.exit(1)
+        print(f"\nFull detail saved to {path}")
 
 
 if __name__ == "__main__":

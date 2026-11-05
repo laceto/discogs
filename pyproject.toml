@@ -13,6 +13,8 @@ authors = [{ name = "Luigi Vinegar", email = "luigi.vinegar@gmail.com" }]
 
 dependencies = [
     "requests>=2.31",
+    "python3-discogs-client>=2.8",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -37,3 +39,7 @@ select = ["E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
+
+[[tool.mypy.overrides]]
+module = "discogs_client.*"
+ignore_missing_imports = true

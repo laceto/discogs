@@ -6,7 +6,13 @@ A Python library project (fresh scaffold, no application code yet). This file ro
 
 **CODING (Python)** — Adding a module to `discogs/`, writing a script, fixing a bug
 → READ: `coding-rules.md`
-→ ALSO READ: `docs/architecture.md` for data flow context (currently a placeholder — fill in as structure lands)
+→ ALSO READ: `docs/architecture.md` for data flow context
+
+**DATA COLLECTION** — Adding/changing a Discogs collector (`discogs/collectors/`), the client, or
+the storage/schema shape of a persisted entity
+→ READ: `coding-rules.md`
+→ ALSO READ: `docs/schemas.md` for the persisted storage shape (where entities land under `data/`,
+  the release-record field layout) and `docs/architecture.md` for how the collectors compose
 
 **TESTING** — Writing new tests or expanding coverage
 → READ: `testing-rules.md`
@@ -31,7 +37,8 @@ Root holds only: config files (`pyproject.toml`, `requirements.txt`, `.gitignore
 
 | File | Contents |
 |---|---|
-| `docs/architecture.md` | Data flow, module responsibilities, design invariants — placeholder until real modules exist |
+| `docs/architecture.md` | Data flow, module responsibilities, design invariants |
+| `docs/schemas.md` | Storage shape decision + the persisted release-record field layout |
 
 ## Instructions
 
