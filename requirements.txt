@@ -4,3 +4,6 @@
 requests>=2.31
 python3-discogs-client>=2.8
 python-dotenv>=1.0
+deepagents>=0.7
+langchain-openai>=1.7
+langgraph-checkpoint-sqlite>=3.1
