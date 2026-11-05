@@ -38,3 +38,12 @@ def load_json(entity_type: str, id: Any, base_dir: Path | None = None) -> dict[s
         return None
     result: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return result
+
+
+def list_ids(entity_type: str, base_dir: Path | None = None) -> list[str]:
+    """Return the ids saved under `<base_dir>/<entity_type>/`, sorted; `[]` if none exist yet."""
+    base = base_dir if base_dir is not None else _REPO_ROOT / "data"
+    folder = base / entity_type
+    if not folder.is_dir():
+        return []
+    return sorted(p.stem for p in folder.glob("*.json"))

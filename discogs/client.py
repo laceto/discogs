@@ -9,6 +9,8 @@ import os
 import discogs_client
 from dotenv import load_dotenv
 
+from discogs.ratelimit import ThrottledFetcher
+
 USER_AGENT = "discogs-data-collector/0.1"
 
 
@@ -30,4 +32,6 @@ def get_client() -> discogs_client.Client:
             "https://www.discogs.com/settings/developers, then set it in your "
             "environment (see .env.example)."
         )
-    return discogs_client.Client(USER_AGENT, user_token=token)
+    client = discogs_client.Client(USER_AGENT, user_token=token)
+    client._fetcher = ThrottledFetcher(token)  # paces requests + retries 5xx (see ratelimit.py)
+    return client

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from discogs.storage import load_json, save_json
+from discogs.storage import list_ids, load_json, save_json
 
 
 @pytest.fixture
@@ -79,7 +79,17 @@ def test_default_base_dir_resolves_under_repo_root(
     fake_root = tmp_path / "fake_repo"
     monkeypatch.setattr(storage, "_REPO_ROOT", fake_root)
 
-    path = storage.save_json("release", 99, {"id": 99})
+    path = save_json("release", 99, {"id": 99})
 
     assert path == fake_root / "data" / "release" / "99.json"
     assert storage.load_json("release", 99) == {"id": 99}
+
+
+def test_list_ids_returns_sorted_saved_ids(tmp_path):
+    save_json("release", 2, {"id": 2}, base_dir=tmp_path)
+    save_json("release", 1, {"id": 1}, base_dir=tmp_path)
+    assert list_ids("release", base_dir=tmp_path) == ["1", "2"]
+
+
+def test_list_ids_missing_entity_type_returns_empty(tmp_path):
+    assert list_ids("label", base_dir=tmp_path) == []
