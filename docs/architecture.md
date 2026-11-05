@@ -9,13 +9,19 @@ pulls full release detail as the atomic unit, composes that into breadth crawls 
 ```
 discogs/
   client.py                  Auth: builds the discogs_client.Client
-  storage.py                 Persistence: save_json / load_json
+  ratelimit.py               ThrottledFetcher: paces requests, pauses when budget low, retries 5xx
+  storage.py                 Persistence: save_json / load_json / list_ids
   collectors/
     _pagination.py           Shared pagination + rate-limit backoff helper (no Discogs-entity knowledge)
     release.py                collect_release / collect_marketplace_stats / collect_price_suggestions
     label.py                   collect_label_releases   (label -> releases)
     artist.py                  collect_artist_releases  (artist -> releases, skipping mixed-in masters)
     master.py                  collect_master_versions  (master -> version releases)
+  agent/
+    tools.py                 LangChain tools wrapping the collectors + RequestBudget
+    agent.py                 build_agent(): Deep Agents graph, memory, sandbox, checkpointer
+    session.py               run_turn(): one chat turn incl. human-approval pauses
+scripts/chat.py              CLI entry point for the agent
 ```
 
 ### `discogs/client.py`
@@ -131,3 +137,22 @@ stats and price suggestions, and saves the combined record.
   marketplace snapshot, no price suggestion for a grade — each is represented as a documented
   zero/empty/`None` value (see `docs/schemas.md`), since real Discogs releases routinely lack one
   or more of these.
+
+## Agent (`discogs/agent/`)
+
+A LangChain Deep Agents agent that drives the collectors through tools. Run it with
+`python scripts/chat.py` (needs `OPENAI_API_KEY` and `DISCOGS_USER_TOKEN`; model via
+`DISCOGS_AGENT_MODEL`, default `openai:gpt-5`).
+
+- **Tools** (`tools.py`): one per collector function plus `remaining_budget`, `list_saved`,
+  `load_saved`. API tools return short summaries; the full record is saved by `storage`.
+- **Request budget**: every API tool charges a shared `RequestBudget` (default 100 per run,
+  `DISCOGS_AGENT_BUDGET`) and errors once it is spent. Crawls are capped by `max_items` and the
+  remaining budget. Per-minute pacing is separate and lives in `ratelimit.py` (about 54 requests/min).
+- **Memory**: `docs/architecture.md` and `docs/schemas.md` are loaded read-only into the system
+  prompt; `data/_agent/notes.md` is the agent's writable notes file. Conversations persist in a
+  SQLite checkpointer (`data/_agent/checkpoints.sqlite`) keyed by `--thread`.
+- **Sandbox**: the agent can read `docs/` and `data/`, write only `data/_agent/`, and is denied
+  everything else. Dotfiles need explicit deny patterns because `**` does not match them; without
+  them `.env` (API keys) would be readable. Covered by `tests/test_agent_agent.py`.
+- **Human approval**: `crawl_*` and `search_releases` pause for a yes/no before running.

@@ -14,6 +14,11 @@ the storage/schema shape of a persisted entity
 → ALSO READ: `docs/schemas.md` for the persisted storage shape (where entities land under `data/`,
   the release-record field layout) and `docs/architecture.md` for how the collectors compose
 
+**AGENT** — Changing the Deep Agents agent, its tools, memory, sandbox permissions or rate limiting
+(`discogs/agent/`, `discogs/ratelimit.py`, `scripts/chat.py`)
+→ READ: `coding-rules.md`
+→ ALSO READ: `docs/architecture.md` (the Agent section)
+
 **TESTING** — Writing new tests or expanding coverage
 → READ: `testing-rules.md`
 

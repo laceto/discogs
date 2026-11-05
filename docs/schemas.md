@@ -101,3 +101,13 @@ Notes:
 - `collect_label` does **not** include the label's releases — that's a much larger, paginated
   operation handled separately by `collect_label_releases`, which calls `collect_label` once for
   the profile and then walks releases into separate `release` records.
+
+## Other files under `data/`
+
+- `data/discography/<artist_id>.json` - the raw `/artists/{id}/releases` listing: a list of
+  summary stubs (`id`, `type` = `release` or `master`, `title`, `year`, `role`, `label`, `format`,
+  `main_release` for masters, `thumb`, `stats`). It has no genres, styles, tracklist or durations;
+  those only exist in the full release records (`data/release/<id>.json`). Masters have no label
+  in this listing. Not written by a collector yet (saved by hand so far).
+- `data/_agent/notes.md` - the chat agent's writable notes, persisted across sessions.
+- `data/_agent/checkpoints.sqlite` - the agent's saved conversations, one per `--thread`.
