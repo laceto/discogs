@@ -121,3 +121,15 @@ def test_collector_tools_are_registered(repo):
     tool_node = agent.get_graph().nodes["tools"].data
     names = set(tool_node.tools_by_name)
     assert {"get_release", "crawl_artist_releases", "load_saved", "remaining_budget"} <= names
+
+
+def test_model_name_string_is_built_with_retries(repo, monkeypatch):
+    seen = {}
+
+    def fake_init(name, **kwargs):
+        seen.update(name=name, **kwargs)
+        return ScriptedModel(messages=iter([]))
+
+    monkeypatch.setattr("discogs.agent.agent.init_chat_model", fake_init)
+    build_agent(SimpleNamespace(), model="openai:some-model", repo_root=repo)
+    assert seen == {"name": "openai:some-model", "max_retries": 6}

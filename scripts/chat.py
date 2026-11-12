@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Chat with the Discogs Deep Agents agent.
 
 Run from the repo root with the venv active:
@@ -12,11 +13,16 @@ DISCOGS_AGENT_MODEL, e.g. "openai:gpt-5".
 
 import argparse
 import json
+import sys
 import uuid
+from pathlib import Path
 
-from discogs.agent.agent import DEFAULT_BUDGET, build_agent
-from discogs.agent.session import run_turn
-from discogs.agent.tools import RequestBudget
+# Let `python scripts/chat.py` find the `discogs` package without installing it.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from discogs.agent.agent import DEFAULT_BUDGET, build_agent  # noqa: E402
+from discogs.agent.session import run_turn  # noqa: E402
+from discogs.agent.tools import RequestBudget  # noqa: E402
 
 
 def _ask_approval(tool_name: str, args: dict) -> bool:

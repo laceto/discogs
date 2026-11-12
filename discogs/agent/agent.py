@@ -18,6 +18,7 @@ from typing import Any
 from deepagents import FilesystemPermission, create_deep_agent
 from deepagents.backends import FilesystemBackend
 from dotenv import load_dotenv
+from langchain.chat_models import init_chat_model
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from discogs.agent.tools import RequestBudget, build_tools
@@ -25,6 +26,7 @@ from discogs.agent.tools import RequestBudget, build_tools
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_MODEL = "openai:gpt-5"
 DEFAULT_BUDGET = 100
+MODEL_MAX_RETRIES = 6  # ride out transient connection errors during long runs
 NOTES_PATH = "/data/_agent/notes.md"
 MEMORY_FILES = ["/docs/architecture.md", "/docs/schemas.md", NOTES_PATH]
 APPROVAL_REQUIRED_TOOLS = (
@@ -96,6 +98,8 @@ def build_agent(
         budget = RequestBudget(int(os.environ.get("DISCOGS_AGENT_BUDGET", DEFAULT_BUDGET)))
     if model is None:
         model = os.environ.get("DISCOGS_AGENT_MODEL", DEFAULT_MODEL)
+    if isinstance(model, str):
+        model = init_chat_model(model, max_retries=MODEL_MAX_RETRIES)
 
     _ensure_notes(root)
     checkpoint_db = root / "data" / "_agent" / "checkpoints.sqlite"
