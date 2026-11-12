@@ -26,6 +26,9 @@ dev = [
     "pytest-cov",
     "mypy",
     "ruff",
+    "nbformat",
+    "nbconvert",
+    "ipykernel",
 ]
 
 [tool.pytest.ini_options]
